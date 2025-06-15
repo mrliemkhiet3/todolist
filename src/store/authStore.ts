@@ -8,6 +8,7 @@ interface AuthState {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
@@ -15,6 +16,7 @@ interface AuthState {
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   clearError: () => void;
   fetchProfile: () => Promise<void>;
+  initialize: () => Promise<void>;
 }
 
 // Email validation regex
@@ -29,7 +31,37 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       profile: null,
       isLoading: false,
+      isInitialized: false,
       error: null,
+
+      initialize: async () => {
+        set({ isLoading: true });
+        
+        try {
+          // Get the current session
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Session initialization error:', error);
+            set({ isInitialized: true, isLoading: false });
+            return;
+          }
+
+          if (session?.user) {
+            set({ user: session.user });
+            await get().fetchProfile();
+          }
+          
+          set({ isInitialized: true, isLoading: false });
+        } catch (error: any) {
+          console.error('Auth initialization error:', error);
+          set({ 
+            error: error.message || 'Failed to initialize authentication',
+            isInitialized: true,
+            isLoading: false 
+          });
+        }
+      },
 
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
@@ -232,14 +264,47 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Initialize auth state
+// Initialize auth state and handle auth changes
+let isInitializing = false;
+
+const initializeAuth = async () => {
+  if (isInitializing) return;
+  isInitializing = true;
+  
+  try {
+    await useAuthStore.getState().initialize();
+  } finally {
+    isInitializing = false;
+  }
+};
+
+// Set up auth state change listener
 supabase.auth.onAuthStateChange(async (event, session) => {
   const { fetchProfile } = useAuthStore.getState();
   
+  console.log('Auth state change:', event, session?.user?.id);
+  
   if (event === 'SIGNED_IN' && session?.user) {
-    useAuthStore.setState({ user: session.user });
+    useAuthStore.setState({ 
+      user: session.user, 
+      isInitialized: true,
+      error: null 
+    });
     await fetchProfile();
   } else if (event === 'SIGNED_OUT') {
-    useAuthStore.setState({ user: null, profile: null });
+    useAuthStore.setState({ 
+      user: null, 
+      profile: null, 
+      isInitialized: true,
+      error: null 
+    });
+  } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+    useAuthStore.setState({ 
+      user: session.user,
+      error: null 
+    });
   }
 });
+
+// Initialize on module load
+initializeAuth();

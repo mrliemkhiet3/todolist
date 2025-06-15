@@ -10,50 +10,50 @@ import CalendarPage from '../components/CalendarPage';
 import TeamPage from '../components/TeamPage';
 import { useTaskStore } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
-import { supabase } from '../lib/supabase';
 
 const DashboardPage = () => {
   const { fetchTasks, fetchProjects } = useTaskStore();
-  const { user, fetchProfile } = useAuthStore();
-  const [isSessionReady, setIsSessionReady] = useState(false);
+  const { user, isInitialized, fetchProfile } = useAuthStore();
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
     const initializeDashboard = async () => {
-      try {
-        // Wait for Supabase session to be ready
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session error:', error);
-          setIsSessionReady(true);
-          return;
-        }
+      // Wait for auth to be initialized
+      if (!isInitialized) {
+        return;
+      }
 
-        if (session?.user) {
-          // Ensure profile is loaded
-          await fetchProfile();
-          // Fetch projects first, then tasks
-          await fetchProjects();
-          await fetchTasks();
-        }
-        
-        setIsSessionReady(true);
+      // If no user after initialization, don't try to fetch data
+      if (!user) {
+        setIsDataLoaded(true);
+        return;
+      }
+
+      try {
+        // Ensure profile is loaded
+        await fetchProfile();
+        // Fetch projects first, then tasks
+        await fetchProjects();
+        await fetchTasks();
+        setIsDataLoaded(true);
       } catch (error) {
         console.error('Dashboard initialization error:', error);
-        setIsSessionReady(true);
+        setIsDataLoaded(true);
       }
     };
 
     initializeDashboard();
-  }, [user, fetchTasks, fetchProjects, fetchProfile]);
+  }, [user, isInitialized, fetchTasks, fetchProjects, fetchProfile]);
 
-  // Show loading state until session is ready
-  if (!isSessionReady) {
+  // Show loading state until auth is initialized and data is loaded
+  if (!isInitialized || !isDataLoaded) {
     return (
       <div className="flex h-screen bg-gray-50 items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">
+            {!isInitialized ? 'Initializing...' : 'Loading dashboard...'}
+          </p>
         </div>
       </div>
     );

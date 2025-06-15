@@ -51,6 +51,22 @@ interface TaskState {
   clearError: () => void;
 }
 
+// Helper function to get authenticated user
+const getAuthenticatedUser = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    console.error('Session error:', error);
+    throw new Error('Authentication failed');
+  }
+  
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  
+  return session.user;
+};
+
 export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
@@ -65,13 +81,7 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Get current session instead of user to ensure we have fresh auth state
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.user) {
-            throw new Error('Not authenticated');
-          }
-
-          const user = session.user;
+          const user = await getAuthenticatedUser();
 
           // First check if user has any projects, if not create a default one
           const { data: existingProjects } = await supabase
@@ -146,12 +156,7 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.user) {
-            throw new Error('Not authenticated');
-          }
-
-          const user = session.user;
+          const user = await getAuthenticatedUser();
 
           const { data, error } = await supabase
             .from('tasks')
@@ -180,6 +185,8 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
+          await getAuthenticatedUser(); // Verify authentication
+
           const { error } = await supabase
             .from('tasks')
             .update({
@@ -206,6 +213,8 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
+          await getAuthenticatedUser(); // Verify authentication
+
           const { error } = await supabase
             .from('tasks')
             .delete()
@@ -229,13 +238,7 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Get current session instead of user to ensure we have fresh auth state
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.user) {
-            throw new Error('Not authenticated');
-          }
-
-          const user = session.user;
+          const user = await getAuthenticatedUser();
 
           // Fetch projects with members
           const { data: projectsData, error: projectsError } = await supabase
@@ -287,12 +290,7 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.user) {
-            throw new Error('Not authenticated');
-          }
-
-          const user = session.user;
+          const user = await getAuthenticatedUser();
 
           // Create project
           const { data: project, error: projectError } = await supabase
@@ -335,6 +333,8 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
+          await getAuthenticatedUser(); // Verify authentication
+
           const { error } = await supabase
             .from('projects')
             .update({
@@ -361,6 +361,8 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
+          await getAuthenticatedUser(); // Verify authentication
+
           const { error } = await supabase
             .from('projects')
             .delete()
