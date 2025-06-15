@@ -65,10 +65,13 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
+          // Get current session instead of user to ensure we have fresh auth state
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.user) {
             throw new Error('Not authenticated');
           }
+
+          const user = session.user;
 
           // First check if user has any projects, if not create a default one
           const { data: existingProjects } = await supabase
@@ -143,10 +146,12 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.user) {
             throw new Error('Not authenticated');
           }
+
+          const user = session.user;
 
           const { data, error } = await supabase
             .from('tasks')
@@ -224,10 +229,13 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
+          // Get current session instead of user to ensure we have fresh auth state
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.user) {
             throw new Error('Not authenticated');
           }
+
+          const user = session.user;
 
           // Fetch projects with members
           const { data: projectsData, error: projectsError } = await supabase
@@ -279,10 +287,12 @@ export const useTaskStore = create<TaskState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.user) {
             throw new Error('Not authenticated');
           }
+
+          const user = session.user;
 
           // Create project
           const { data: project, error: projectError } = await supabase
